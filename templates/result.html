@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>X-Ray Analysis Results | Medical AI</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Add inline styles to fix width issues */
+        .modern-progress-bar {
+            height: 100%;
+            border-radius: 10px;
+        }
+        .modern-progress-bar.covid {
+            background-color: var(--covid-color);
+        }
+        .modern-progress-bar.normal {
+            background-color: var(--normal-color);
+        }
+        .modern-progress-bar.tb {
+            background-color: var(--tb-color);
+        }
+        .analysis-image {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            border-radius: 10px;
+            transition: transform 0.3s ease;
+        }
+        .analysis-image:hover {
+            transform: scale(1.02);
+        }
+    </style>
+</head>
+<body>
+    <!-- Particles Background -->
+    <div id="particles-js" class="particles-container results-particles"></div>
+
+    <!-- Main Content -->
+    <div class="container main-content">
+        <!-- Navigation Bar -->
+        <div class="navigation-bar">
+            <a href="/" class="back-button">
+                <i class="fas fa-chevron-left"></i>
+                <span>Back to Upload</span>
+            </a>
+        </div>
+        
+        <!-- Result Header -->
+        <div class="result-header animate__animated animate__fadeIn">
+            <div class="result-icon">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <h1 class="result-title">Analysis Complete</h1>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-xl-10 col-lg-11">
+                <!-- Main Result Section -->
+                <div class="card result-card modern-card animate__animated animate__fadeInUp animate__delay-1s">
+                    <div class="card-body">
+                        <!-- Primary Diagnosis -->
+                        <div class="primary-diagnosis-section {% if predicted_class == 'Corona Virus' %}covid-section{% elif predicted_class == 'Normal' %}normal-section{% else %}tb-section{% endif %}">
+                            <div class="diagnosis-content">
+                                <div class="diagnosis-label">Primary Diagnosis</div>
+                                <div class="diagnosis-result-text">{{ predicted_class }}</div>
+                                <div class="diagnosis-icon-big">
+                                    {% if predicted_class == "Corona Virus" %}
+                                        <i class="fas fa-virus"></i>
+                                    {% elif predicted_class == "Normal" %}
+                                        <i class="fas fa-check-circle"></i>
+                                    {% else %}
+                                        <i class="fas fa-bacteria"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="diagnosis-description">
+                                    {% if predicted_class == "Corona Virus" %}
+                                        <p>AI analysis detected patterns consistent with COVID-19 infection</p>
+                                    {% elif predicted_class == "Normal" %}
+                                        <p>No significant abnormalities detected in lung tissue</p>
+                                    {% else %}
+                                        <p>Patterns detected consistent with Tuberculosis infection</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tabbed Analysis Content -->
+                        <div class="analysis-tabs-container">
+                            <ul class="nav nav-tabs analysis-tabs" id="resultTabs" role="tablist">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active" id="images-tab" data-bs-toggle="tab" data-bs-target="#images-content" type="button" role="tab">
+                                        <i class="fas fa-images"></i> Image Analysis
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="probabilities-tab" data-bs-toggle="tab" data-bs-target="#probabilities-content" type="button" role="tab">
+                                        <i class="fas fa-chart-bar"></i> Probabilities
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link" id="explanation-tab" data-bs-toggle="tab" data-bs-target="#explanation-content" type="button" role="tab">
+                                        <i class="fas fa-info-circle"></i> Explanation
+                                    </button>
+                                </li>
+                            </ul>
+                            
+                            <div class="tab-content analysis-tab-content" id="resultTabsContent">
+                                <!-- Images Tab Content -->
+                                <div class="tab-pane fade show active" id="images-content" role="tabpanel">
+                                    <div class="row g-4">
+                                        <div class="col-md-12">
+                                            <div class="analysis-image-card">
+                                                <div class="image-card-header">
+                                                    <h3>GradCAM Analysis</h3>
+                                                    <div class="image-card-badge gradcam-badge">
+                                                        <i class="fas fa-microscope"></i> AI Visualization
+                                                    </div>
+                                                </div>
+                                                <div class="image-card-body loading" id="gradcam-image-container">
+                                                    {% if error_message %}
+                                                    <div class="alert alert-danger">
+                                                        <strong>Error:</strong> {{ error_message }}
+                                                    </div>
+                                                    <img 
+                                                        src="{{ url_for('static', filename=uploaded_img) }}" 
+                                                        class="img-fluid analysis-image" 
+                                                        alt="Original Image"
+                                                        onload="this.parentElement.classList.remove('loading')"
+                                                    >
+                                                    {% else %}
+                                                    <img 
+                                                        src="data:image/png;base64,{{ gradcam_img }}" 
+                                                        class="img-fluid analysis-image zoomable-image" 
+                                                        alt="GradCAM Visualization"
+                                                        data-fullsize="data:image/png;base64,{{ gradcam_img }}"
+                                                        onload="this.parentElement.classList.remove('loading')"
+                                                    >
+                                                    {% endif %}
+                                                </div>
+                                                
+                                                {% if not error_message %}
+                                                <div class="image-card-footer">
+                                                    <div class="gradcam-legend">
+                                                        <div class="legend-item">
+                                                            <div class="legend-color" style="background: rgba(59,130,246,0.7)"></div>
+                                                            <div class="legend-label">Low Activation</div>
+                                                        </div>
+                                                        <div class="legend-item">
+                                                            <div class="legend-color" style="background: rgba(250,204,21,0.7)"></div>
+                                                            <div class="legend-label">Medium Activation</div>
+                                                        </div>
+                                                        <div class="legend-item">
+                                                            <div class="legend-color" style="background: rgba(220,38,38,0.7)"></div>
+                                                            <div class="legend-label">High Activation</div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Probabilities Tab Content -->
+                                <div class="tab-pane fade" id="probabilities-content" role="tabpanel">
+                                    <div class="row g-4">
+                                        <div class="col-lg-6">
+                                            <div class="chart-container-wrapper">
+                                                <canvas id="probabilityChart"></canvas>
+                                            </div>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <div class="probabilities-list">
+                                                {% for result in results %}
+                                                <div class="probability-item modern-prob-item {% if result.class == predicted_class %}highlighted{% endif %}">
+                                                    <div class="prob-label-section">
+                                                        {% if result.class == "Corona Virus" %}
+                                                            <div class="disease-icon covid">
+                                                                <i class="fas fa-virus"></i>
+                                                            </div>
+                                                            <span class="disease-name">{{ result.class }}</span>
+                                                        {% elif result.class == "Normal" %}
+                                                            <div class="disease-icon normal">
+                                                                <i class="fas fa-check"></i>
+                                                            </div>
+                                                            <span class="disease-name">{{ result.class }}</span>
+                                                        {% else %}
+                                                            <div class="disease-icon tb">
+                                                                <i class="fas fa-bacteria"></i>
+                                                            </div>
+                                                            <span class="disease-name">{{ result.class }}</span>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="prob-bar-section">
+                                                        <div class="prob-percentage">{{ result.probability }}</div>
+                                                        <div class="modern-progress">
+                                                            <div 
+                                                                class="modern-progress-bar {% if result.class == 'Corona Virus' %}covid{% elif result.class == 'Normal' %}normal{% else %}tb{% endif %}" 
+                                                                style="width: {{ result.probability }};"
+                                                            ></div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                {% endfor %}
+                                                
+                                                <div class="probability-disclaimer">
+                                                    <div class="disclaimer-icon">
+                                                        <i class="fas fa-info-circle"></i>
+                                                    </div>
+                                                    <div class="disclaimer-text">
+                                                        Probabilities represent the AI model's confidence in each diagnosis possibility.
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Explanation Tab Content -->
+                                <div class="tab-pane fade" id="explanation-content" role="tabpanel">
+                                    <div class="explanation-content">
+                                        <div class="explanation-section">
+                                            <h4>About the Analysis</h4>
+                                            <p>This analysis was performed using a GhostNet deep learning model trained on thousands of chest X-rays. The model examines patterns in lung tissue to identify signs consistent with various respiratory conditions.</p>
+                                            
+                                            {% if predicted_class == "Corona Virus" %}
+                                                <div class="condition-explanation">
+                                                    <h4><i class="fas fa-virus text-danger"></i> Corona Virus Patterns</h4>
+                                                    <p>The AI model identified patterns often associated with COVID-19 infection, such as:</p>
+                                                    <ul>
+                                                        <li>Ground glass opacities in the lung fields</li>
+                                                        <li>Bilateral peripheral consolidation</li>
+                                                        <li>Patchy distribution of abnormalities</li>
+                                                    </ul>
+                                                    <p>The GradCAM visualization highlights the regions that most influenced this diagnosis, showing areas of the lung with inflammatory patterns.</p>
+                                                </div>
+                                            {% elif predicted_class == "Normal" %}
+                                                <div class="condition-explanation">
+                                                    <h4><i class="fas fa-check-circle text-success"></i> Normal Scan Assessment</h4>
+                                                    <p>The AI model has classified this X-ray as normal, indicating:</p>
+                                                    <ul>
+                                                        <li>Clear lung fields without significant opacities</li>
+                                                        <li>No evidence of consolidation or infiltrates</li>
+                                                        <li>Normal cardiac silhouette and pulmonary vasculature</li>
+                                                    </ul>
+                                                    <p>The GradCAM visualization shows the areas the AI examined to confirm normal lung appearance.</p>
+                                                </div>
+                                            {% else %}
+                                                <div class="condition-explanation">
+                                                    <h4><i class="fas fa-bacteria text-warning"></i> Tuberculosis Patterns</h4>
+                                                    <p>The AI model detected patterns consistent with tuberculosis infection, including:</p>
+                                                    <ul>
+                                                        <li>Upper lobe infiltrates and/or cavitation</li>
+                                                        <li>Fibrotic changes and volume loss</li>
+                                                        <li>Nodular opacities with possible hilar lymphadenopathy</li>
+                                                    </ul>
+                                                    <p>The GradCAM visualization highlights the regions showing these TB-related abnormalities.</p>
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <div class="gradcam-explanation">
+                                                <h4><i class="fas fa-microscope text-primary"></i> About GradCAM</h4>
+                                                <p>Gradient-weighted Class Activation Mapping (GradCAM) is an explainable AI technique that produces a heat map highlighting which regions of the image most influenced the model's decision. Red areas indicate regions of highest importance to the final diagnosis.</p>
+                                            </div>
+                                            
+                                            <div class="medical-disclaimer alert alert-warning">
+                                                <div class="disclaimer-icon">
+                                                    <i class="fas fa-exclamation-triangle"></i>
+                                                </div>
+                                                <div class="disclaimer-content">
+                                                    <h5>Medical Disclaimer</h5>
+                                                    <p>This analysis is provided for educational purposes only and should not be considered a medical diagnosis. Always consult with a qualified healthcare provider for proper interpretation of radiological images and appropriate treatment.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer text-center modern-footer">
+                        <div class="row">
+                            <div class="col-md-6 mb-3 mb-md-0">
+                                <div class="footer-item">
+                                    <i class="fas fa-calendar"></i> Analysis Date: {{ now.strftime('%B %d, %Y') }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="footer-item">
+                                    <i class="fas fa-robot"></i> Powered by GhostNet AI
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Bottom Action Button -->
+                <div class="text-center mt-4 mb-5 animate__animated animate__fadeIn animate__delay-2s">
+                    <a href="/" class="btn-analyze">
+                        <span class="btn-text">Analyze Another X-Ray</span>
+                        <span class="btn-icon">
+                            <i class="fas fa-redo"></i>
+                        </span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fullscreen Image Modal -->
+    <div id="imageModal" class="fullscreen-modal">
+        <span class="fullscreen-close">&times;</span>
+        <img class="fullscreen-modal-content" id="fullscreenImage">
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script>
+        // Initialize Particles.js
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set loading class for GradCAM image container
+            document.getElementById('gradcam-image-container').classList.add('loading');
+            
+            // Fullscreen image functionality
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('fullscreenImage');
+            const closeBtn = document.getElementsByClassName('fullscreen-close')[0];
+            const zoomableImages = document.querySelectorAll('.zoomable-image');
+            
+            zoomableImages.forEach(img => {
+                img.style.cursor = 'pointer';
+                img.addEventListener('click', function() {
+                    modal.classList.add('show');
+                    modalImg.src = this.getAttribute('data-fullsize');
+                });
+            });
+            
+            closeBtn.addEventListener('click', function() {
+                modal.classList.remove('show');
+            });
+            
+            modal.addEventListener('click', function(event) {
+                if (event.target === modal) {
+                    modal.classList.remove('show');
+                }
+            });
+
+            if (typeof particlesJS !== 'undefined') {
+                particlesJS('particles-js', {
+                    particles: {
+                        number: {
+                            value: 50,
+                            density: {
+                                enable: true,
+                                value_area: 800
+                            }
+                        },
+                        color: {
+                            value: "#4285f4"
+                        },
+                        shape: {
+                            type: "circle",
+                            stroke: {
+                                width: 0,
+                                color: "#000000"
+                            }
+                        },
+                        opacity: {
+                            value: 0.2,
+                            random: true,
+                            anim: {
+                                enable: true,
+                                speed: 1,
+                                opacity_min: 0.05,
+                                sync: false
+                            }
+                        },
+                        size: {
+                            value: 4,
+                            random: true,
+                            anim: {
+                                enable: true,
+                                speed: 1,
+                                size_min: 0.1,
+                                sync: false
+                            }
+                        },
+                        line_linked: {
+                            enable: true,
+                            distance: 150,
+                            color: "#4285f4",
+                            opacity: 0.2,
+                            width: 1
+                        },
+                        move: {
+                            enable: true,
+                            speed: 0.5,
+                            direction: "none",
+                            random: true,
+                            straight: false,
+                            out_mode: "out",
+                            bounce: false
+                        }
+                    },
+                    interactivity: {
+                        detect_on: "canvas",
+                        events: {
+                            onhover: {
+                                enable: true,
+                                mode: "grab"
+                            },
+                            onclick: {
+                                enable: true,
+                                mode: "push"
+                            },
+                            resize: true
+                        },
+                        modes: {
+                            grab: {
+                                distance: 140,
+                                line_linked: {
+                                    opacity: 0.8
+                                }
+                            },
+                            push: {
+                                particles_nb: 3
+                            }
+                        }
+                    },
+                    retina_detect: true
+                });
+            }
+            
+            // Setup Chart.js for the probability chart
+            const ctx = document.getElementById('probabilityChart').getContext('2d');
+            
+            // Extract data from template
+            const labels = [];
+            {% for result in results %}
+            labels.push("{{ result.class }}");
+            {% endfor %}
+            
+            const data = [];
+            {% for result in results %}
+            data.push({{ result.probability | replace('%', '') }});
+            {% endfor %}
+            
+            // Define class colors
+            const backgroundColor = [
+                'rgba(220, 53, 69, 0.7)',  // Danger/Red for Corona Virus
+                'rgba(40, 167, 69, 0.7)',  // Success/Green for Normal
+                'rgba(255, 193, 7, 0.7)'   // Warning/Yellow for Tuberculosis
+            ];
+            
+            const borderColor = [
+                'rgb(220, 53, 69)',
+                'rgb(40, 167, 69)',
+                'rgb(255, 193, 7)'
+            ];
+            
+            // Create the chart
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Probability (%)',
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderColor: borderColor,
+                        borderWidth: 2,
+                        borderRadius: 5,
+                        maxBarThickness: 60
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `Probability: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            max: 100,
+                            title: {
+                                display: true,
+                                text: 'Probability (%)',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: true,
+                                color: 'rgba(200, 200, 200, 0.2)'
+                            },
+                            ticks: {
+                                font: {
+                                    family: "'Poppins', sans-serif"
+                                }
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Condition',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                font: {
+                                    family: "'Poppins', sans-serif"
+                                }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1500
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html> 

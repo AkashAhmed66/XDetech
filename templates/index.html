@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medical X-Ray Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Particles Background -->
+    <div id="particles-js" class="particles-container"></div>
+
+    <!-- Main Content -->
+    <div class="container main-content">
+        <div class="row justify-content-center">
+            <div class="col-xl-10 col-lg-11">
+                <!-- Header Section -->
+                <header class="app-header text-center animate__animated animate__fadeInDown">
+                    <div class="logo-container">
+                        <div class="logo-icon">
+                            <i class="fas fa-lungs-virus"></i>
+                        </div>
+                    </div>
+                    <h1 class="app-title">
+                        <span class="text-gradient">AI X-Ray Analysis</span>
+                        <div class="subtitle">Powered by GhostNet with GradCAM</div>
+                    </h1>
+                    
+                    <!-- Features Pills -->
+                    <div class="features-container">
+                        <div class="feature-pill">
+                            <i class="fas fa-brain"></i> Deep Learning
+                        </div>
+                        <div class="feature-pill">
+                            <i class="fas fa-chart-bar"></i> 98% Accuracy
+                        </div>
+                        <div class="feature-pill">
+                            <i class="fas fa-microscope"></i> GradCAM
+                        </div>
+                    </div>
+                </header>
+                
+                <!-- Main Card -->
+                <div class="card main-card modern-card animate__animated animate__fadeIn animate__delay-1s">
+                    <div class="card-body p-0">
+                        <div class="row g-0">
+                            <!-- Left Section: Information -->
+                            <div class="col-lg-5">
+                                <div class="info-section">
+                                    <h2 class="section-title">
+                                        <i class="fas fa-info-circle title-icon"></i> About
+                                    </h2>
+                                    
+                                    <div class="info-content">
+                                        <p>
+                                            Our advanced AI system uses the state-of-the-art GhostNet architecture to 
+                                            analyze chest X-rays and identify potential respiratory conditions.
+                                        </p>
+                                        
+                                        <div class="disease-badges">
+                                            <div class="disease-badge covid">
+                                                <div class="badge-icon">
+                                                    <i class="fas fa-virus"></i>
+                                                </div>
+                                                <span>Corona Virus</span>
+                                            </div>
+                                            
+                                            <div class="disease-badge normal">
+                                                <div class="badge-icon">
+                                                    <i class="fas fa-check"></i>
+                                                </div>
+                                                <span>Normal</span>
+                                            </div>
+                                            
+                                            <div class="disease-badge tb">
+                                                <div class="badge-icon">
+                                                    <i class="fas fa-bacteria"></i>
+                                                </div>
+                                                <span>Tuberculosis</span>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="explainability-section">
+                                            <h3>GradCAM Visualization</h3>
+                                            <p>
+                                                Our system provides an advanced GradCAM visualization that highlights 
+                                                the regions of interest in the X-ray that influenced the AI's decision 
+                                                making, providing transparency and explainability.
+                                            </p>
+                                            <div class="explainability-icon">
+                                                <i class="fas fa-eye"></i>
+                                            </div>
+                                        </div>
+
+                                        {% with messages = get_flashed_messages(with_categories=true) %}
+                                            {% if messages %}
+                                                {% for category, message in messages %}
+                                                <div class="alert alert-{{ category if category != 'message' else 'info' }} mt-3">
+                                                    <i class="fas fa-info-circle me-2"></i> {{ message }}
+                                                </div>
+                                                {% endfor %}
+                                            {% endif %}
+                                        {% endwith %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Right Section: Upload -->
+                            <div class="col-lg-7">
+                                <div class="upload-section">
+                                    <h2 class="section-title">
+                                        <i class="fas fa-upload title-icon"></i> Upload X-Ray
+                                    </h2>
+                                    
+                                    <form action="/" method="post" enctype="multipart/form-data" class="upload-form">
+                                        <div class="modern-upload-container">
+                                            <input type="file" name="file" id="file-upload" class="modern-file-input" accept="image/*" required>
+                                            <div class="modern-upload-area">
+                                                <div class="upload-content">
+                                                    <div class="upload-icon">
+                                                        <i class="fas fa-cloud-upload-alt"></i>
+                                                    </div>
+                                                    <div class="upload-text">
+                                                        <span class="primary-text">Drag & drop your X-ray image here</span>
+                                                        <span class="secondary-text">or click to browse files</span>
+                                                    </div>
+                                                    <div class="upload-formats">
+                                                        Supported formats: JPEG, PNG, DICOM
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div id="file-preview" class="modern-file-preview d-none">
+                                                <div class="preview-container">
+                                                    <div class="preview-header">
+                                                        <h5><i class="fas fa-file-image me-2"></i> Selected Image</h5>
+                                                        <button type="button" id="remove-file" class="btn-close"></button>
+                                                    </div>
+                                                    <div class="preview-image-container">
+                                                        <img id="preview-image" src="#" alt="Preview">
+                                                    </div>
+                                                    <div class="preview-footer">
+                                                        <span id="file-name">filename.jpg</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="action-container">
+                                            <button type="submit" class="btn-analyze">
+                                                <span class="btn-text">Analyze X-Ray</span>
+                                                <span class="btn-icon">
+                                                    <i class="fas fa-microscope"></i>
+                                                </span>
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-footer modern-footer text-center">
+                        <div class="disclaimer">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            Medical Disclaimer: This tool is for educational purposes only and should not replace professional medical advice.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    <script>
+        // Initialize Particles.js when the document is fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof particlesJS !== 'undefined') {
+                particlesJS('particles-js', {
+                    "particles": {
+                        "number": {
+                            "value": 80,
+                            "density": {
+                                "enable": true,
+                                "value_area": 800
+                            }
+                        },
+                        "color": {
+                            "value": "#4285f4"
+                        },
+                        "shape": {
+                            "type": "circle",
+                            "stroke": {
+                                "width": 0,
+                                "color": "#000000"
+                            },
+                        },
+                        "opacity": {
+                            "value": 0.3,
+                            "random": true,
+                            "anim": {
+                                "enable": true,
+                                "speed": 1,
+                                "opacity_min": 0.1,
+                                "sync": false
+                            }
+                        },
+                        "size": {
+                            "value": 5,
+                            "random": true,
+                            "anim": {
+                                "enable": true,
+                                "speed": 2,
+                                "size_min": 0.1,
+                                "sync": false
+                            }
+                        },
+                        "line_linked": {
+                            "enable": true,
+                            "distance": 150,
+                            "color": "#4285f4",
+                            "opacity": 0.3,
+                            "width": 1
+                        },
+                        "move": {
+                            "enable": true,
+                            "speed": 1,
+                            "direction": "none",
+                            "random": true,
+                            "straight": false,
+                            "out_mode": "out",
+                            "bounce": false,
+                        }
+                    },
+                    "interactivity": {
+                        "detect_on": "canvas",
+                        "events": {
+                            "onhover": {
+                                "enable": true,
+                                "mode": "grab"
+                            },
+                            "onclick": {
+                                "enable": true,
+                                "mode": "push"
+                            },
+                            "resize": true
+                        },
+                        "modes": {
+                            "grab": {
+                                "distance": 140,
+                                "line_linked": {
+                                    "opacity": 1
+                                }
+                            },
+                            "push": {
+                                "particles_nb": 4
+                            }
+                        }
+                    },
+                    "retina_detect": true
+                });
+            }
+            
+            // Display filename in preview
+            document.getElementById('file-upload').addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    document.getElementById('file-name').textContent = this.files[0].name;
+                }
+            });
+        });
+    </script>
+</body>
+</html> 
